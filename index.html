@@ -1,0 +1,164 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Finding the Treasure</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%}
+body{font-family:"Trebuchet MS",Verdana,sans-serif;font-size:clamp(15px,2.2vmin + 6px,26px);color:#fff;background:linear-gradient(#5ec8f2,#0a74b8 55%,#06385f);background-attachment:fixed;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;background:repeating-radial-gradient(circle at 30% 120%,transparent 0 40px,rgba(255,255,255,.07) 41px 44px);animation:w 8s linear infinite;pointer-events:none}
+@keyframes w{to{background-position:90px 0}}
+.wrap{max-width:1000px;margin:auto;padding:12px;position:relative}
+.card{background:rgba(5,40,70,.78);border:3px solid #ffd45c;border-radius:20px;padding:16px;margin:10px 0;box-shadow:0 8px 24px #0006}
+h1{font-size:2em;margin:.2em 0;text-align:center;color:#ffd45c;text-shadow:0 3px 0 #7a4a00}
+h2{margin:.2em 0;color:#ffd45c}
+button,input{font:inherit}
+.btn{background:linear-gradient(#ffd45c,#f09a1a);color:#4a2a00;border:0;border-radius:14px;padding:12px 18px;font-weight:bold;cursor:pointer;box-shadow:0 5px 0 #8a5300;margin:5px;transition:.1s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #8a5300}.btn:disabled{opacity:.5}
+.opt{display:block;width:100%;text-align:left;background:#fff;color:#07335a;border:3px solid #8cd2f5;border-radius:14px;padding:12px;margin:8px 0;cursor:pointer;font-weight:bold}
+.opt:hover{background:#fff4c9}.opt.ok{background:#6fe38a}.opt.no{background:#ff8a8a}
+input[type=text]{width:100%;padding:12px;border-radius:12px;border:3px solid #ffd45c;margin:6px 0}
+.row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center}
+.pick{flex:1 1 140px;font-size:2.2em;padding:18px 8px;text-align:center;background:#fff;color:#07335a;border-radius:16px;border:4px solid #ffd45c;cursor:pointer}.pick.sel{background:#fff4c9;transform:scale(1.06)}
+.hud{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-weight:bold}
+.map{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;position:relative;padding:6px}
+.node{aspect-ratio:1;border-radius:50%;background:#2d9ad6aa;border:2px dashed #fff8;display:flex;align-items:center;justify-content:center;font-size:.8em}
+.node.boss{background:#c0392bcc;border-color:#ffd45c}.node.done{background:#46c46acc}.node.cur{outline:4px solid #ffd45c}
+.ship{position:absolute;font-size:2.2em;transition:left 1.4s ease,top 1.4s ease;transform:translate(-50%,-55%);animation:bob 1.5s ease-in-out infinite;filter:drop-shadow(0 4px 3px #0008);z-index:3}
+@keyframes bob{50%{margin-top:-6px}}
+.crew{display:flex;flex-wrap:wrap;gap:4px;font-size:1.5em;min-height:1.6em}.crew span{animation:pop .6s}
+@keyframes pop{0%{transform:scale(0) rotate(-90deg)}70%{transform:scale(1.5)}100%{transform:scale(1)}}
+.bar{height:14px;background:#0006;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:#6fe38a;width:100%}
+.big{font-size:1.5em;font-weight:bold;line-height:1.4;margin:8px 0}
+.boss{font-size:4em;text-align:center;animation:shake .6s infinite}@keyframes shake{25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+.fb{font-size:1.5em;font-weight:bold;text-align:center;padding:10px;border-radius:14px;margin:8px 0}.fb.g{background:#2e9e56}.fb.r{background:#b53a3a}
+table{width:100%;border-collapse:collapse;background:#fff1;font-size:.9em}th,td{padding:7px;text-align:center;border-bottom:1px solid #fff4}th{background:#0007}tr.me{background:#ffd45c55}
+.hide{display:none}.tiny{font-size:.8em;opacity:.85}
+.conf{position:fixed;top:-10vh;font-size:2em;animation:fall 3s linear forwards;z-index:9;pointer-events:none}@keyframes fall{to{top:110vh;transform:rotate(540deg)}}
+</style></head><body><div class="wrap">
+<h1>🏴‍☠️ Finding the Treasure 💰</h1>
+<div style="text-align:right"><button class="btn" id="mute" onclick="toggleMusic()">🔊 Music</button></div>
+
+<div id="start" class="card">
+ <h2>Welcome, new pirate!</h2>
+ <p>Choose your pirate and type your name. Sail through 16 stages, answer Passive Voice questions, and collect villagers to find the treasure!</p>
+ <div class="row"><div class="pick sel" id="gM" onclick="pickG('M')">🧔‍♂️<br><small>Captain (boy)</small></div><div class="pick" id="gF" onclick="pickG('F')">👩‍🦰<br><small>Captain (girl)</small></div></div>
+ <input type="text" id="nm" maxlength="16" placeholder="Your pirate name">
+ <div class="row"><button class="btn" onclick="startGame()">⚓ Set Sail!</button><button class="btn" onclick="showBoard(null)">🏆 Leaderboard</button></div>
+</div>
+
+<div id="game" class="hide">
+ <div class="card"><div class="hud"><span id="hN"></span><span id="hS"></span><span id="hT"></span><span id="hH"></span></div>
+ <div class="map" id="map"><div class="ship" id="ship">⛵</div></div>
+ <div class="tiny">Crew:</div><div class="crew" id="crew"></div></div>
+ <div class="card" id="main"></div>
+</div>
+
+<div id="end" class="card hide"></div>
+</div>
+<script>
+// ---------- DATA ----------
+const Q={
+1:[["The apple ___ by the squirrel.","is eaten",["eat","are eaten","eats"]],["English ___ in many countries.","is spoken",["speaks","are spoken","speaking"]]],
+2:[["The treasure map ___ by a pirate in 1700.","was drawn",["drew","were drawn","is drawn"]],["The ship ___ during the storm.","was damaged",["damaged","were damaged","is damaged"]]],
+3:[["Many fish ___ in this bay every day.","are caught",["is caught","catches","was caught"]],["The gates ___ at night.","are locked",["is locked","locks","locking"]]],
+4:[["The cake ___ by my mother yesterday.","was baked",["is baked","baked","were baked"]],["The windows ___ by the boys last week.","were broken",["was broken","broke","are broken"]]],
+6:[["Look! The sails ___ now.","are being raised",["are raising","is being raised","were raised"]],["The island ___ by the sailors at the moment.","is being explored",["is exploring","are being explored","was exploring"]]],
+8:[["The chest has just ___ by the captain.","been opened",["opened","being opened","be opened"]],["Two ships ___ since the storm.","have been lost",["has been lost","have lost","were lost"]]],
+9:[["The treasure ___ tomorrow.","will be shared",["will share","is shared","was shared"]],["A new flag ___ tomorrow at noon.","will be raised",["will raise","will be raising","was raised"]]],
+10:[["The deck must ___ every morning.","be cleaned",["cleaned","be cleaning","been cleaned"]],["The map can ___ only with a special key.","be read",["be reading","been read","is read"]]],
+12:[["Rice ___ on this island by the villagers.","is grown",["grows","are grown","is growing"]],["The villagers ___ by the pirates last night.","were helped",["helped","was helped","are helped"]]],
+13:[["The bridge is going to ___ next week.","be built",["build","built","being built"]],["The parrot ___ to say \"Hooray!\" by the captain.","was taught",["taught","was teach","teach"]]],
+14:[["The letter ___ yet.","hasn't been sent",["hasn't sent","isn't sending","didn't been sent"]],["This song ___ by children all over the world.","is sung",["is sang","sings","was singing"]]]};
+const BOSS={
+5:["The captain opened the treasure chest.",["the treasure chest was opened by the captain"],["The treasure chest was opened by the captain.","The treasure chest is opened by the captain.","The treasure chest opened by the captain.","The captain was opened by the treasure chest."]],
+7:["The sailors are painting the ship.",["the ship is being painted by the sailors"],["The ship is being painted by the sailors.","The ship is painted by the sailors.","The ship was being painted by the sailors.","The ship are being painted by the sailors."]],
+11:["Someone has stolen the golden key.",["the golden key has been stolen","the golden key has been stolen by someone"],["The golden key has been stolen.","The golden key was stolen.","The golden key has stolen.","The golden key had been steal."]],
+15:["You must return the gold to the villagers.",["the gold must be returned to the villagers","the gold must be returned to the villagers by you"],["The gold must be returned to the villagers.","The gold must returned to the villagers.","The gold must be return to the villagers.","The gold is must be returned to the villagers."]]};
+const ISL=["🏝️ Coconut Cove","🌋 Ember Isle","🏖️ Pearl Beach","🏘️ Fisher's Village","🌴 Palm Bay","⛰️ Mist Mountain","🐚 Shell Harbor","🏞️ Lagoon Lands","🌺 Flower Isle","🦜 Parrot Point","🏰 Old Fort Isle","🌅 Sunset Shore","🐢 Turtle Island","🍍 Pineapple Port"];
+const FOLK=["👨‍🌾","👩‍🌾","👨‍🍳","👩‍🍳","👨‍🎣","👩‍🎤","🧑‍🔧","👵","👴","👧","👦","🧑‍🌾"];
+const BN={5:"🦑 Kraken Island",7:"🐙 Octo-Captain Bay",11:"👹 Ghost Pirate Fort",15:"🐉 Sea Dragon Cave"};
+const POOL=Object.values(Q).flat();
+// ---------- STATE / HELPERS ----------
+let G='M',S,timer,tleft,music,ac,musicOn=true;
+const $=i=>document.getElementById(i);
+const sh=a=>a.map(x=>[Math.random(),x]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+const show=id=>["start","game","end"].forEach(x=>$(x).classList.toggle("hide",x!=id));
+const norm=s=>s.toLowerCase().replace(/[.!?,]/g,"").replace(/\s+/g," ").trim();
+function pickG(g){G=g;$("gM").classList.toggle("sel",g=="M");$("gF").classList.toggle("sel",g=="F")}
+// sound
+function A(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(ac&&ac.state=="suspended")ac.resume();return ac}
+function tone(f,d,t="triangle",v=.12,dl=0){if(!A())return;const o=ac.createOscillator(),g=ac.createGain(),s=ac.currentTime+dl;o.type=t;o.frequency.value=f;g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(g);g.connect(ac.destination);o.start(s);o.stop(s+d)}
+function say(t,p,r){try{const u=new SpeechSynthesisUtterance(t);u.pitch=p;u.rate=r;u.lang="en-US";speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function cheer(){[523,659,784,1047].forEach((f,i)=>tone(f,.25,"square",.1,i*.09));say("Hooray!",1.6,1.1)}
+function boo(){[330,277,233,196].forEach((f,i)=>tone(f,.3,"sawtooth",.1,i*.18));say("Awww!",.5,.7)}
+const MEL=[392,440,523,440,392,330,392,440,523,587,523,440,392,330,294,330];
+function startMusic(){stopMusic();if(!musicOn)return;let i=0;music=setInterval(()=>{tone(MEL[i%16],.22,"triangle",.06);if(i%4==0)tone(MEL[i%16]/2,.4,"sine",.07);i++},260)}
+function stopMusic(){clearInterval(music)}
+function toggleMusic(){musicOn=!musicOn;$("mute").textContent=musicOn?"🔊 Music":"🔇 Music";musicOn?startMusic():stopMusic()}
+function confetti(e="🎉"){for(let i=0;i<24;i++){const c=document.createElement("div");c.className="conf";c.textContent=["🎉","💰","⭐",e][i%4];c.style.left=Math.random()*100+"vw";c.style.animationDelay=Math.random()+"s";document.body.appendChild(c);setTimeout(()=>c.remove(),4500)}}
+// ---------- GAME ----------
+function startGame(){
+ const n=$("nm").value.trim();if(!n){$("nm").focus();$("nm").placeholder="Please type a name!";return}
+ A();S={name:n,g:G,stage:1,score:0,crew:[],wrong:0,streak:0,help:0,t0:Date.now(),route:0};
+ buildMap();show("game");startMusic();route()}
+function buildMap(){const m=$("map");[...m.querySelectorAll(".node")].forEach(x=>x.remove());
+ for(let i=1;i<=16;i++){const d=document.createElement("div");d.className="node"+(BN[i]?" boss":"");d.id="n"+i;d.textContent=i==16?"💰":BN[i]?"👹":i;m.appendChild(d)}}
+function hud(){$("hN").textContent=(S.g=="M"?"🧔‍♂️ ":"👩‍🦰 ")+S.name;$("hS").textContent="⭐ "+S.score+(S.streak>=3?" 🔥x2":"");$("hH").textContent="🆘 Help left: "+(2-S.help);
+ $("crew").innerHTML=S.crew.map(c=>"<span>"+c+"</span>").join("")||"<span class='tiny'>No villagers yet</span>";
+ for(let i=1;i<=16;i++){const n=$("n"+i);n.classList.toggle("done",i<S.stage);n.classList.toggle("cur",i==S.stage)}
+ const n=$("n"+S.stage),s=$("ship");s.style.left=n.offsetLeft+n.offsetWidth/2+"px";s.style.top=n.offsetTop+n.offsetHeight/2+"px"}
+function tick(){$("hT").textContent="⏱️ "+Math.max(0,tleft)+"s"}
+function startTimer(sec,onEnd){clearInterval(timer);tleft=sec;const full=sec;tick();const b=$("tb");
+ timer=setInterval(()=>{tleft--;tick();if(b){b.style.width=Math.max(0,tleft/full*100)+"%";b.style.background=tleft<10?"#ff6b6b":"#6fe38a"}if(tleft<=0){clearInterval(timer);onEnd()}},1000)}
+function route(){hud();clearInterval(timer);
+ if(S.stage==16)return bonus();
+ const m=$("main");
+ if(BN[S.stage]){m.innerHTML=`<h2>Stage ${S.stage}: BOSS!</h2><div class="boss">${BN[S.stage].split(" ")[0]}</div><p class="big" style="text-align:center">${BN[S.stage]}</p><p class="tiny" style="text-align:center">Change the Active sentence into Passive. Correct = +30 points and a new villager!</p><div class="row"><button class="btn" onclick="boss()">⚔️ Fight the Boss!</button></div>`;return}
+ const a=ISL[(S.stage*2)%ISL.length],b=ISL[(S.stage*2+1)%ISL.length];
+ m.innerHTML=`<h2>Stage ${S.stage}: Choose your route!</h2><p>Each island has a different question.</p><div class="row"><div class="pick" onclick="ask(${S.stage},0,'${a}')">${a}</div><div class="pick" onclick="ask(${S.stage},1,'${b}')">${b}</div></div>`}
+function ask(st,r,isl){S.isl=isl;const [t,c,w]=Q[st][r];S.cur={ans:c,pts:10,kind:"mcq"};
+ $("main").innerHTML=`<div class="hud"><span>Stage ${st} · ${isl}</span><span class="tiny">Fill in the blank</span></div><div class="bar"><i id="tb"></i></div><p class="big">${t.replace("___","<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>")}</p><div id="os"></div>`;
+ opts([c,...w],c,ok=>fin(ok,10,c));startTimer(50,()=>fin(false,0,c))}
+function opts(list,c,cb){$("os").innerHTML="";sh(list).forEach(o=>{const b=document.createElement("button");b.className="opt";b.textContent=o;b.onclick=()=>{[...$("os").children].forEach(x=>{x.disabled=true;if(x.textContent==c)x.classList.add("ok")});if(o!=c)b.classList.add("no");cb(o==c)};$("os").appendChild(b)})}
+function boss(){const [a,ok,op]=BOSS[S.stage];S.isl=BN[S.stage];S.half=false;S.tried=false;
+ $("main").innerHTML=`<div class="hud"><span>BOSS · ${BN[S.stage]}</span></div><div class="bar"><i id="tb"></i></div><p class="tiny">Change into Passive Voice:</p><p class="big">✍️ ${a}</p><div id="os"></div><div id="ty"></div><div id="hl"></div><div id="fbk"></div>`;
+ if(S.stage==5){typed()}else{$("ty").innerHTML="";helpBtn()}
+ startTimer(50,()=>fin(false,0,op[0]))}
+function typed(){$("ty").innerHTML=`<input type="text" id="ti" placeholder="Type the Passive sentence..." autocomplete="off"><button class="btn" onclick="chk()">✅ Submit</button>`;$("ti").onkeydown=e=>{if(e.key=="Enter")chk()};if(S.tried)helpBtn()}
+function chk(){const v=norm($("ti").value),ok=BOSS[S.stage][1];if(!v)return;
+ if(ok.includes(v))return fin(true,30,BOSS[S.stage][2][0]);
+ S.tried=true;$("fbk").innerHTML=`<div class="fb r">Not quite! Try again, or use a Help.</div>`;helpBtn()}
+function helpBtn(){const can=S.help<2&&S.crew.length>0;
+ $("hl").innerHTML=can?`<button class="btn" onclick="useHelp()">🆘 Sacrifice 1 villager for choices (half points)</button>`:`<p class="tiny">${S.stage==5?"No help available.":"Help needs a villager and max 2 uses."}</p>`;
+ if(!can&&S.stage!=5){$("ty").innerHTML=`<input type="text" id="ti" placeholder="Type the Passive sentence..." autocomplete="off"><button class="btn" onclick="chk()">✅ Submit</button>`;$("ti").onkeydown=e=>{if(e.key=="Enter")chk()}}}
+function useHelp(){S.help++;const lost=S.crew.pop();S.half=true;hud();$("ty").innerHTML="";$("hl").innerHTML=`<p class="tiny">${lost} left the ship to help you! Points are halved.</p>`;$("fbk").innerHTML="";
+ const [,,op]=BOSS[S.stage];opts(op,op[0],ok=>fin(ok,15,op[0]))}
+function fin(ok,pts,ans){clearInterval(timer);[...document.querySelectorAll("#os .opt")].forEach(x=>x.disabled=true);
+ const m=$("main");let msg;
+ if(ok){S.streak++;let p=pts;if(S.streak>=3&&S.stage<16)p*=2;S.score+=p;const v=sh(FOLK)[0];S.crew.push(v);S.stage++;
+  msg=`<div class="fb g">Correct! ✅ +${p} points${p>pts?" 🔥 (Bonus x2!)":""}<br>${v} joined your crew!</div>`;cheer();confetti(v)}
+ else{S.streak=0;S.wrong++;S.stage=Math.max(1,S.stage-1);
+  msg=`<div class="fb r">Incorrect! ❌<br>Answer: <b>${ans}</b><br>The villager left and your ship sails back!</div>`;boo()}
+ hud();m.insertAdjacentHTML("beforeend",msg+`<div class="row"><button class="btn" onclick="route()">${ok?"⛵ Sail on!":"⛵ Try again"}</button></div>`)}
+// bonus round
+function bonus(){S.bq=sh(POOL);S.bi=0;S.bs=0;
+ $("main").innerHTML=`<h2>💰 Stage 16: BONUS ROUND!</h2><p>Answer as many as you can in 60 seconds. Right = +50, wrong = −5.</p><div class="row"><button class="btn" onclick="bq()">🏝️ Go to Treasure Island!</button></div>`}
+function bq(){const [t,c,w]=S.bq[S.bi%S.bq.length];
+ $("main").innerHTML=`<div class="hud"><span>Bonus · Round score: ${S.bs}</span></div><div class="bar"><i id="tb"></i></div><p class="big">${t.replace("___","<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>")}</p><div id="os"></div>`;
+ opts([c,...w],c,ok=>{if(ok){S.score+=50;S.bs+=50;cheer()}else{S.score=Math.max(0,S.score-5);S.bs-=5;S.wrong++;boo()}hud();S.bi++;setTimeout(()=>{if(tleft>0)bq()},900)});
+ if(!S.bt){S.bt=1;startTimer(60,endGame)}else{$("tb").style.width=tleft/60*100+"%"}}
+function endGame(){clearInterval(timer);S.bt=0;stopMusic();confetti("💰");confetti("🏆");
+ const rec={name:S.name,g:S.g,score:S.score,time:Math.round((Date.now()-S.t0)/1000),wrong:S.wrong,crew:S.crew.length};
+ const L=load();L.push(rec);save(L);
+ $("main").innerHTML=`<h2>🏆 You found the treasure!</h2><div class="boss">💰</div><p class="big" style="text-align:center">Score: ${rec.score}</p><div class="row"><button class="btn" onclick="showBoard(${L.length-1})">📊 See Leaderboard</button></div>`;}
+// leaderboard
+let mem=[];
+function load(){try{const x=JSON.parse(localStorage.getItem("ftt_board")||"null");if(x)mem=x}catch(e){}return mem}
+function save(L){mem=L;try{localStorage.setItem("ftt_board",JSON.stringify(L))}catch(e){}}
+function fmt(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+function showBoard(me){const L=load().map((r,i)=>({...r,i})).sort((a,b)=>b.score-a.score||a.time-b.time);
+ const med=["🥇 1st","🥈 2nd","🥉 3rd"];
+ $("end").innerHTML=`<h2>🏆 Leaderboard</h2><div style="overflow-x:auto"><table><tr><th>Rank</th><th>Player</th><th>Score</th><th>Time</th><th>Wrong</th><th>Crew</th></tr>${L.map((r,k)=>`<tr class="${r.i===me?"me":""}"><td>${med[k]||(k+1)+"th"}</td><td>${r.g=="M"?"🧔‍♂️":"👩‍🦰"} ${r.name.replace(/</g,"&lt;")}</td><td>${r.score}</td><td>${fmt(r.time)}</td><td>${r.wrong}</td><td>${r.crew}</td></tr>`).join("")||"<tr><td colspan=6>No players yet</td></tr>"}</table></div>
+ <div class="row"><button class="btn" onclick="stopMusic();$('nm').value='';show('start')">➡️ Next Player</button><button class="btn" onclick="if(confirm('Clear all scores?')){save([]);showBoard(null)}">🗑️ Clear</button></div>`;
+ stopMusic();show("end")}
+window.addEventListener("resize",()=>{if(S&&S.name)hud()});
+</script></body></html>
